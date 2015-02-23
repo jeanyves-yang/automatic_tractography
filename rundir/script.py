@@ -41,7 +41,7 @@ step2 = 1
 step3 = 1
 step4 = 1
 step5 = 0
-step5a = 0
+step5a = 1
 step5b = 0
 # 1/ co-register DTI atlases
 if(step1 == 0):
@@ -54,11 +54,10 @@ if(step1 == 0):
 
 if(step2 == 0):
     for file in os.listdir(inputdir):
-        if( file == "Arc_R_FrontoParietal_bundle_clean.vtk"):
-            fiberMapped = os.path.splitext(file)[0] + "_t.vtk"
-            subprocess.call([polydatatransform, "--fiber-file", inputdir + "/" + file,
-                             "-o", inputdir + "/" + fiberMapped, "-D",
-                             displacementField, "--inverty", "--invertx"] )
+        fiberMapped = os.path.splitext(file)[0] + "_t.vtk"
+        subprocess.call([polydatatransform, "--fiber-file", inputdir + "/" + file,
+                         "-o", inputdir + "/" + fiberMapped, "-D",
+                         displacementField, "--inverty", "--invertx"] )
 
 #3/ voxelize all tracts, dilate by 2 voxels and apply transform to label maps (NN) => ROIs in new atlas - OK (need ResampleVolume2?)
 
@@ -90,14 +89,13 @@ if(step4 == 0):
 #5/ post processing: cut ends with FA or WM roi
 
 if(step5 == 0):
-
+    FAImage = workdir + "/FinalAtlasDTI_FA.nrrd"
+    MDImage = workdir + "/FinalAtlasDTI_MD.nrrd"
+    WMmask = workdir + "/WMmask.nrrd"
+    MDmask = workdir + "/MDmask.nrrd"
 # a/ create WM mask and MD mask
     if( step5a == 0 ):
-        FAImage = workdir + "/FinalAtlasDTI_FA.nrrd"
         #for now need to create MD mask or provide it (could create it automatically with the atlas provided + dtiprocess)
-        MDImage = workdir + "/FinalAtlasDTI_MD.nrrd"
-        WMmask = workdir + "/WMmask.nrrd"
-        MDmask = workdir + "/MDmask.nrrd"
         subprocess.call([ImageMath, FAImage, "-outfile", WMmask, "-dilate", "10,10"])
         subprocess.call([ImageMath, WMmask, "-otsu", "-outfile", WMmask])
         subprocess.call([ImageMath, MDImage, "-outfile", MDmask, "-otsuMultipleThresholds", "-otsuPara", otsuPara]
@@ -111,8 +109,6 @@ if(step5 == 0):
                 outputCrop = inputdir + "/" + os.path.splitext(file)[0] + "_o_cleanEnds.vtk"
                 subprocess.call([FiberPostProcess, "-i", inputdir + "/" + file, "-o", outputCrop, "--crop", "-m", WMmask,
                                  "--thresholdMode", "above" ])
-                print outputCrop
-
         for file in os.listdir(workdir):
             if(file.endswith("_dil.vtp")):
                 print file
@@ -120,7 +116,7 @@ if(step5 == 0):
                 outputCrop = os.path.splitext(file)[0] + "_cleanEnds.vtp"
                 outputMaskCSF = os.path.splitext(file)[0] + "_maskCSF.vtp"
                 outputMaskTract = os.path.splitext(file)[0] + "_maskTract.vtp"
-                outputFiber = workdir + "/" + "outputFiber.vtk"
+                outputFiber = os.path.splitext(file)[0] + "_lengthMatch.vtp"
                 lengthMatchFiber = inputdir + "/" + file[:-8] + "_o_cleanEnds.vtk"
                 subprocess.call([FiberPostProcess, "-i", file, "-o", outputCrop, "--crop", "-m", WMmask,
                                  "--thresholdMode", "above"])
